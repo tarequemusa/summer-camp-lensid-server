@@ -35,7 +35,7 @@ async function run () {
         const classCollection = client.db("lensIdDb").collection("class");
 
         app.get('/class', async (req, res) => {
-            const result = await classCollection.find().sort({student_capacity: -1}).toArray();
+            const result = await classCollection.find().sort({seats_available: -1}).toArray();
             res.send(result);
         })
 

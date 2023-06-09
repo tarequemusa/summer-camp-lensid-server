@@ -31,12 +31,34 @@ async function run () {
     try {
         // Connect the client to the server	(optional starting in v4.7)
         await client.connect();
+
+        const classCollection = client.db("lensIdDb").collection("class");
+
+        app.get('/class', async (req, res) => {
+            const result = await classCollection.find().sort({student_capacity: -1}).toArray();
+            res.send(result);
+        })
+
+        const instructorCollection = client.db("lensIdDb").collection("instructor");
+
+        app.get('/instructor', async (req, res) => {
+            const result = await instructorCollection.find().sort({enrolled_students: -1}).toArray();
+            res.send(result);
+        })
+
+
+
+
+
+
+
+
         // Send a ping to confirm a successful connection
         await client.db("admin").command({ping: 1});
         console.log("Pinged your deployment. You successfully connected to MongoDB!");
     } finally {
         // Ensures that the client will close when you finish/error
-        await client.close();
+        // await client.close();
     }
 }
 run().catch(console.dir);

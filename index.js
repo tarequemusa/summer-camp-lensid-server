@@ -33,23 +33,53 @@ async function run () {
         await client.connect();
 
         const classCollection = client.db("lensIdDb").collection("class");
+        const instructorCollection = client.db("lensIdDb").collection("instructor");
+        const usersCollection = client.db("lensIdDb").collection("users");
+        const cartCollection = client.db("lensIdDb").collection("carts");
+
+
+        // Class Collection:
 
         app.get('/class', async (req, res) => {
             const result = await classCollection.find().sort({seats_available: -1}).toArray();
             res.send(result);
         })
 
-        const instructorCollection = client.db("lensIdDb").collection("instructor");
+        // instructor Collection:
 
         app.get('/instructor', async (req, res) => {
             const result = await instructorCollection.find().sort({enrolled_students: -1}).toArray();
             res.send(result);
         })
 
+        // User Collection:
+
+        app.get('/users', async (req, res) => {
+            const result = await usersCollection.find().toArray();
+            res.send(result);
+        });
+
+        app.post('/users', async (req, res) => {
+            const user = req.body;
+            const query = {email: user.email}
+            const existingUser = await usersCollection.findOne(query);
+
+            if(existingUser) {
+                return res.send({message: 'user already exists'})
+            }
+
+            const result = await usersCollection.insertOne(user);
+            res.send(result);
+        });
 
 
-
-
+        // Cart Collection
+        app.post('/carts', async (req, res) => {
+            const item = req.body;
+            console.log(item);
+            const result = await cartCollection.insertOne(item);
+            res.send(result);
+        })
 
 
 

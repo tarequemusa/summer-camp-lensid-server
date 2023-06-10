@@ -5,12 +5,14 @@ require('dotenv').config()
 const port = process.env.PORT || 5000;
 
 
+//middleware
+const corsOptions = {
+    origin: '*',
+    credentials: true,
+    optionSuccessStatus: 200,
+}
 
-
-
-
-// middleware
-app.use(cors());
+app.use(cors(corsOptions))
 app.use(express.json());
 
 
@@ -30,12 +32,34 @@ const client = new MongoClient(uri, {
 async function run () {
     try {
         // Connect the client to the server	(optional starting in v4.7)
-        await client.connect();
+        // await client.connect();
 
         const classCollection = client.db("lensIdDb").collection("class");
         const instructorCollection = client.db("lensIdDb").collection("instructor");
         const usersCollection = client.db("lensIdDb").collection("users");
         const cartCollection = client.db("lensIdDb").collection("carts");
+
+
+        // cart collection apis
+        app.get('/carts', async (req, res) => {
+            const email = req.query.email;
+            if(!email) {
+                return res.send([]);
+
+
+            }
+            const query = {email: email};
+            const result = await cartCollection.find(query).toArray();
+            res.send(result);
+        });
+
+
+        app.post('/carts', async (req, res) => {
+            const item = req.body;
+            console.log(item);
+            const result = await cartCollection.insertOne(item);
+            res.send(result);
+        })
 
 
         // Class Collection:
@@ -73,30 +97,11 @@ async function run () {
         });
 
 
-        // cart collection apis
-        app.get('/carts', async (req, res) => {
-            const email = req.query.email;
-            if(!email) {
-                res.send([]);
-            }
-            const query = {email: email};
-            const result = await cartCollection.find(query).toArray();
-            res.send(result);
-        });
-
-
-        app.post('/carts', async (req, res) => {
-            const item = req.body;
-            console.log(item);
-            const result = await cartCollection.insertOne(item);
-            res.send(result);
-        })
-
-
 
         // Send a ping to confirm a successful connection
         await client.db("admin").command({ping: 1});
         console.log("Pinged your deployment. You successfully connected to MongoDB!");
+
     } finally {
         // Ensures that the client will close when you finish/error
         // await client.close();

@@ -17,7 +17,7 @@ app.use(express.json());
 
 
 
-const {MongoClient, ServerApiVersion} = require('mongodb');
+const {MongoClient, ServerApiVersion, ObjectId} = require('mongodb');
 const uri = `mongodb+srv://${ process.env.DB_USER }:${ process.env.DB_PASSWORD }@cluster0.g5abh6e.mongodb.net/?retryWrites=true&w=majority`;
 
 // Create a MongoClient with a MongoClientOptions object to set the Stable API version
@@ -64,6 +64,7 @@ async function run () {
             const query = {_id: new ObjectId(id)}
             const result = await cartCollection.deleteOne(query);
             res.send(result);
+            console.log(result);
         })
 
         // Class Collection:

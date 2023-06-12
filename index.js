@@ -107,6 +107,12 @@ async function run () {
             res.send(result);
         })
 
+        app.post('/class', verifyJWT, async (req, res) => {
+            const newItem = req.body;
+            const result = await classCollection.insertOne(newItem)
+            res.send(result);
+        })
+
         // instructor Collection APIs:
 
         app.get('/instructor', async (req, res) => {

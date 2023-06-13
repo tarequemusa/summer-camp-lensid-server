@@ -56,6 +56,7 @@ async function run () {
         const instructorCollection = client.db("lensIdDb").collection("instructor");
         const usersCollection = client.db("lensIdDb").collection("users");
         const cartCollection = client.db("lensIdDb").collection("carts");
+        const paymentCollection = client.db("lensIdDb").collection("payments");
 
 
         app.post('/jwt', (req, res) => {
@@ -104,6 +105,11 @@ async function run () {
 
         app.get('/class', async (req, res) => {
             const result = await classCollection.find().sort({seats_available: -1}).toArray();
+            res.send(result);
+        })
+
+        app.get("/class/:email", async (req, res) => {
+            const result = await classCollection.find({email: req.params.email}).sort({price: -1}).toArray();
             res.send(result);
         })
 
@@ -198,6 +204,89 @@ async function run () {
             const result = await usersCollection.deleteOne(query);
             res.send(result);
         })
+
+
+        // create payment intent
+        app.post('/create-payment-intent', verifyJWT, async (req, res) => {
+            const {price} = req.body;
+            const amount = parseInt(price * 100);
+            const paymentIntent = await stripe.paymentIntents.create({
+                amount: amount,
+                currency: 'usd',
+                payment_method_types: ['card']
+            });
+            res.send({
+                clientSecret: paymentIntent.client_secret
+            })
+        })
+
+
+        // Payment related API
+        app.post('/payments', verifyJWT, async (req, res) => {
+            const payment = req.body;
+            const insertResult = await paymentCollection.insertOne(payment);
+
+            const query = {_id: {$in: payment.cartItems.map(id => new ObjectId(id))}}
+            const deleteResult = await cartCollection.deleteMany(query)
+
+
+            res.send({insertResult, deleteResult});
+        })
+
+
+        app.get('/admin-stats', verifyJWT, async (req, res) => {
+            const users = await usersCollection.estimatedDocumentCount();
+            const classes = await classCollection.estimatedDocumentCount();
+            const coursePayment = await paymentCollection.estimatedDocumentCount();
+
+            const payments = await paymentCollection.find().toArray();
+            const revenue = payments.reduce((sum, payment) => sum + payment.price, 0)
+
+            res.send({
+                revenue,
+                users,
+                classes,
+                coursePayment
+            })
+        })
+
+
+        app.get('/order-stats', verifyJWT, async (req, res) => {
+            const pipeline = [
+                {
+                    $lookup: {
+                        from: 'menu',
+                        localField: 'menuItems',
+                        foreignField: '_id',
+                        as: 'menuItemsData'
+                    }
+                },
+                {
+                    $unwind: '$menuItemsData'
+                },
+                {
+                    $group: {
+                        _id: '$menuItemsData.category',
+                        count: {$sum: 1},
+                        total: {$sum: '$menuItemsData.price'}
+                    }
+                },
+                {
+                    $project: {
+                        category: '$_id',
+                        count: 1,
+                        total: {$round: ['$total', 2]},
+                        _id: 0
+                    }
+                }
+            ]
+
+
+            const result = await paymentCollection.aggregate(pipeline).toArray()
+            res.send(result)
+        })
+
+
 
 
 
